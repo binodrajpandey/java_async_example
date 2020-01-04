@@ -8,5 +8,18 @@ public class Discount {
     Code(int percentage) {
       this.percentage = percentage;
     }
+
+
   }
+
+  public static String applyDiscount(Quote quote) {
+    return quote.getShopName() + " price is " + apply(quote.getPrice(), quote.getDiscountCode());
+
+  }
+
+  public static double apply(double price, Code code) {
+    Delay.delay();
+    return price * (100 - code.percentage) / 100;
+  }
+
 }

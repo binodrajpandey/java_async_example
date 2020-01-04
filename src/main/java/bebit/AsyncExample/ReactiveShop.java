@@ -4,10 +4,11 @@ import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
-public class Shop {
+public class ReactiveShop {
+
   private String name;
 
-  public Shop(String name) {
+  public ReactiveShop(String name) {
     this.name = name;
   }
 
@@ -29,7 +30,7 @@ public class Shop {
   }
 
   private double calculatePrice(String product) {
-    Delay.delay();
+    Delay.randomDelay();
     return new Random().nextDouble() * product.charAt(0) + product.charAt(1);
   }
 
@@ -40,17 +41,5 @@ public class Shop {
   public void setName(String name) {
     this.name = name;
   }
-  // public Future<Double> getPriceAsync(String product) {
-  // CompletableFuture<Double> futurePrice = new CompletableFuture<>();
-  // new Thread(() -> {
-  // try {
-  // double price = calculatePrice(product);
-  // futurePrice.complete(price);
-  // } catch (Exception ex) {
-  // futurePrice.completeExceptionally(ex);
-  // }
-  //
-  // }).start();
-  // return futurePrice;
-  // }
+
 }

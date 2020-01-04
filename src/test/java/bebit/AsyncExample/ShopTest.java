@@ -26,7 +26,6 @@ public class ShopTest {
       double price = futurePrice.get(5, TimeUnit.SECONDS);
       System.out.printf("Price is %.2f%n", price);
     } catch (InterruptedException | ExecutionException | TimeoutException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     }
     long retrievalTime = (System.nanoTime() - start) / 1_000_000;
@@ -41,7 +40,13 @@ public class ShopTest {
   public void testMultipleShopSequential() {
 
     long start = System.nanoTime();
-    System.out.println(findPrices("myPhone27S"));
+    List<Shop> shops = Arrays.asList(new Shop("BestPrice"), new Shop("LetsSaveBig"),
+        new Shop("MyFavoriteShop"), new Shop("BuyItAll"));
+    String product = "myPhone27S";
+    List<String> prices = shops.stream()
+        .map(shop -> String.format("%s price is %.2f%n", shop.getName(), shop.getPrice(product)))
+        .collect(Collectors.toList());
+    System.out.println(prices);
     long duration = (System.nanoTime() - start) / 1_000_000;
     System.out.println("Done in " + duration + " msecs");
 
@@ -54,7 +59,16 @@ public class ShopTest {
   public void testMultipleShopParallelStream() {
 
     long start = System.nanoTime();
-    System.out.println(findPricesParallelSameAsAvailableProcessor("myPhone27S"));
+    int numberOfProcessor = Runtime.getRuntime().availableProcessors();
+    System.out.println("Number of processor=" + numberOfProcessor);
+    List<Shop> shops = new ArrayList<>();
+    for (int i = 1; i <= numberOfProcessor; i++) {
+      shops.add(new Shop("Bebit" + i));
+    }
+    List<String> prices = shops.parallelStream()
+        .map(shop -> String.format("%s price is %.2f%n", shop.getName(), shop.getPrice("product")))
+        .collect(Collectors.toList());
+    System.out.println(prices);
     long duration = (System.nanoTime() - start) / 1_000_000;
     System.out.println("Done in " + duration + " msecs");
 
@@ -67,7 +81,18 @@ public class ShopTest {
   public void testMultipleShopParallelStreamShopGreaterThanAvailableProcessor() {
 
     long start = System.nanoTime();
-    System.out.println(findPricesParallelMoreProcessor("myPhone27S"));
+    int numberOfProcessor = Runtime.getRuntime().availableProcessors();
+    System.out.println("Number of processor=" + numberOfProcessor);
+    List<Shop> shops = new ArrayList<>();
+    for (int i = 1; i <= 100; i++) {
+      shops.add(new Shop("Bebit" + i));
+    }
+    List<String> prices = shops.parallelStream()
+        .map(shop -> String.format("%s price is %.2f%n", shop.getName(), shop.getPrice("product")))
+        .collect(Collectors.toList());
+
+
+    System.out.println(prices);
     long duration = (System.nanoTime() - start) / 1_000_000;
     System.out.println("Done in " + duration + " msecs");
 
@@ -80,7 +105,19 @@ public class ShopTest {
   public void testMultipleShopAsync() {
 
     long start = System.nanoTime();
-    System.out.println(findPricesAsync("myPhone27S"));
+    List<Shop> shops = new ArrayList<>();
+    for (int i = 1; i <= 100; i++) {
+      shops.add(new Shop("Bebit" + i));
+    }
+    List<CompletableFuture<String>> futures = shops.stream()
+        .map(shop -> CompletableFuture.supplyAsync(
+            () -> String.format("%s price is %.2f%n", shop.getName(), shop.getPrice("product")),
+            Executors.newFixedThreadPool(100)))
+        .collect(Collectors.toList());
+    // two pipe is necessary.
+    List<String> prices =
+        futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
+    System.out.println(prices);
     long duration = (System.nanoTime() - start) / 1_000_000;
     System.out.println("Done in " + duration + " msecs");
 
@@ -88,68 +125,35 @@ public class ShopTest {
 
   @Test
   public void testSingleShopWithDiscount() {
-
-    Shop shop = new Shop("my shop");
-    long start = System.nanoTime();
-    Future<Double> futurePrice = shop.getPriceAsync("product");
-    long invocationTime = (System.nanoTime() - start) / 1_000_000;
-    System.out.println("Invocation return after " + invocationTime + " msec.");
-    try {
-      double price = futurePrice.get(5, TimeUnit.SECONDS);
-      System.out.printf("Price is %.2f%n", price);
-    } catch (InterruptedException | ExecutionException | TimeoutException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+    List<Shop> shops = new ArrayList<>();
+    for (int i = 1; i <= 10; i++) {
+      shops.add(new Shop("Bebit" + i));
     }
+    long start = System.nanoTime();
+    List<String> prices = shops.stream().map(shop -> shop.getPriceWithDiscound("product"))
+        .map(Quote::parse).map(Discount::applyDiscount).collect(Collectors.toList());
+    System.out.println(prices);
     long retrievalTime = (System.nanoTime() - start) / 1_000_000;
     System.out.println("Price Returned after " + retrievalTime + " msec.");
 
-  }
 
-  public List<String> findPrices(String product) {
-    List<Shop> shops = Arrays.asList(new Shop("BestPrice"), new Shop("LetsSaveBig"),
-        new Shop("MyFavoriteShop"), new Shop("BuyItAll"));
-
-    return shops.stream()
-        .map(shop -> String.format("%s price is %.2f%n", shop.getName(), shop.getPrice(product)))
-        .collect(Collectors.toList());
-  }
-
-  public List<String> findPricesParallelSameAsAvailableProcessor(String product) {
-    int numberOfProcessor = Runtime.getRuntime().availableProcessors();
-    System.out.println("Number of processor=" + numberOfProcessor);
-    List<Shop> shops = new ArrayList<>();
-    for (int i = 1; i <= numberOfProcessor; i++) {
-      shops.add(new Shop("Bebit" + i));
-    }
-    return shops.parallelStream()
-        .map(shop -> String.format("%s price is %.2f%n", shop.getName(), shop.getPrice(product)))
-        .collect(Collectors.toList());
-  }
-
-  public List<String> findPricesParallelMoreProcessor(String product) {
-    int numberOfProcessor = Runtime.getRuntime().availableProcessors();
-    System.out.println("Number of processor=" + numberOfProcessor);
-    List<Shop> shops = new ArrayList<>();
+    shops = new ArrayList<>();
     for (int i = 1; i <= 100; i++) {
       shops.add(new Shop("Bebit" + i));
     }
-    return shops.parallelStream()
-        .map(shop -> String.format("%s price is %.2f%n", shop.getName(), shop.getPrice(product)))
-        .collect(Collectors.toList());
-  }
-
-  public List<String> findPricesAsync(String product) {
-    List<Shop> shops = new ArrayList<>();
-    for (int i = 1; i <= 100; i++) {
-      shops.add(new Shop("Bebit" + i));
-    }
-    List<CompletableFuture<String>> futures = shops.stream()
+    start = System.nanoTime();
+    List<CompletableFuture<String>> futurePrices = shops.stream()
         .map(shop -> CompletableFuture.supplyAsync(
-            () -> String.format("%s price is %.2f%n", shop.getName(), shop.getPrice(product)),
-            Executors.newFixedThreadPool(100)))
+            () -> shop.getPriceWithDiscound("product"), Executors.newFixedThreadPool(100)))
+        .map(future -> future.thenApply(Quote::parse))
+        .map(future -> future.thenCompose(quote -> CompletableFuture
+            .supplyAsync(() -> Discount.applyDiscount(quote), Executors.newFixedThreadPool(100))))
         .collect(Collectors.toList());
-    return futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
+    prices = futurePrices.stream().map(CompletableFuture::join).collect(Collectors.toList());
+    System.out.println(prices);
+    retrievalTime = (System.nanoTime() - start) / 1_000_000;
+    System.out.println("Price Returned after " + retrievalTime + " msec.");
+
   }
 
 }
